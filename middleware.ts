@@ -61,20 +61,41 @@ export async function middleware(request: NextRequest) {
   if (!token) {
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
+
+    const response = NextResponse.redirect(loginUrl);
+    // Clear any stale cookie that might exist
+    response.cookies.delete("auth-token");
+    response.cookies.set("auth-token", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: -1,
+      expires: new Date(0),
+      path: "/",
+    });
+
+    return response;
   }
 
   // Verify token
   const decoded = await verifyToken(token);
   if (!decoded) {
-    console.warn(
-      `Token verification failed for path: ${pathname}, User-Agent: ${
-        request.headers.get("user-agent") || "unknown"
-      }`
-    );
+    // Clear invalid cookie
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
-    return NextResponse.redirect(loginUrl);
+
+    const response = NextResponse.redirect(loginUrl);
+    response.cookies.delete("auth-token");
+    response.cookies.set("auth-token", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: -1,
+      expires: new Date(0),
+      path: "/",
+    });
+
+    return response;
   }
 
   // Check admin-only routes

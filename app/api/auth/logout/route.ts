@@ -7,13 +7,17 @@ export async function POST() {
       message: "Logout berhasil",
     });
 
-    // Clear the authentication cookie
+    // Clear the authentication cookie completely
+    response.cookies.delete("auth-token");
+
+    // Also set empty cookie with past expiration as fallback
     response.cookies.set("auth-token", "", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax", // Match login cookie settings
-      maxAge: 0,
-      path: "/", // Explicitly set path to match login cookie
+      sameSite: "strict",
+      maxAge: -1,
+      expires: new Date(0),
+      path: "/",
     });
 
     return response;

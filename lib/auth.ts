@@ -68,18 +68,7 @@ export async function verifyToken(token: string): Promise<JWTPayload | null> {
       exp: payload.exp,
     };
   } catch (error) {
-    // Log specific error types for better debugging
-    if (error instanceof Error) {
-      if (error.message.includes("expired")) {
-        console.warn("Token expired:", error.message);
-      } else if (error.message.includes("signature")) {
-        console.error("Token signature verification failed:", error.message);
-      } else {
-        console.error("Token verification failed:", error.message);
-      }
-    } else {
-      console.error("Token verification failed:", error);
-    }
+    console.error("Token verification failed:", error);
     return null;
   }
 }
