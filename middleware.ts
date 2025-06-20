@@ -67,6 +67,11 @@ export async function middleware(request: NextRequest) {
   // Verify token
   const decoded = await verifyToken(token);
   if (!decoded) {
+    console.warn(
+      `Token verification failed for path: ${pathname}, User-Agent: ${
+        request.headers.get("user-agent") || "unknown"
+      }`
+    );
     const loginUrl = new URL("/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(loginUrl);

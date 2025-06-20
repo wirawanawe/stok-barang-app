@@ -26,12 +26,10 @@ export async function authenticatedFetch(
   try {
     const response = await fetch(url, config);
 
-    // Handle authentication errors
+    // Handle authentication errors more gracefully
     if (response.status === 401) {
-      // Token expired or invalid
-      localStorage.removeItem("auth-token");
-      localStorage.removeItem("user");
-      window.location.href = "/login";
+      // Token expired or invalid - let auth context handle this
+      console.warn("Authentication failed - token may be expired");
       throw new Error("Authentication failed");
     }
 
@@ -41,6 +39,12 @@ export async function authenticatedFetch(
 
     return response;
   } catch (error) {
+    // Don't immediately redirect on network errors
+    if (error instanceof TypeError && error.message.includes("fetch")) {
+      console.error("Network error:", error);
+      throw new Error("Network error - please check your connection");
+    }
+
     console.error("API call failed:", error);
     throw error;
   }
