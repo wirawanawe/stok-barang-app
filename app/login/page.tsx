@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff, LogIn, Package } from "lucide-react";
 
-export default function LoginPage() {
+function LoginForm() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -22,12 +22,24 @@ export default function LoginPage() {
 
   const checkAuth = async () => {
     try {
+      const token = localStorage.getItem("auth-token");
+      if (!token) {
+        // No token, user definitely not logged in
+        return;
+      }
+
       const response = await fetch("/api/auth/me");
       if (response.ok) {
         router.push(redirectTo);
+      } else {
+        // Token invalid, clear it
+        localStorage.removeItem("auth-token");
+        localStorage.removeItem("user");
       }
     } catch (error) {
       // User not logged in, continue to login page
+      localStorage.removeItem("auth-token");
+      localStorage.removeItem("user");
     }
   };
 
@@ -183,5 +195,40 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-6 text-white">
+              <div className="flex items-center justify-center mb-4">
+                <Package className="h-12 w-12" />
+              </div>
+              <h1 className="text-2xl font-bold text-center">
+                Stok Barang App
+              </h1>
+              <p className="text-blue-100 text-center mt-2">
+                Sistem Manajemen Inventori
+              </p>
+            </div>
+            <div className="px-8 py-6">
+              <div className="animate-pulse space-y-6">
+                <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                <div className="h-12 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/3"></div>
+                <div className="h-12 bg-gray-200 rounded"></div>
+                <div className="h-12 bg-gray-300 rounded"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+    >
+      <LoginForm />
+    </Suspense>
   );
 }

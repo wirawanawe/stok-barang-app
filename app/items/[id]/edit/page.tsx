@@ -42,12 +42,17 @@ interface FormData {
   max_stock: string;
 }
 
-export default function EditItemPage({ params }: { params: { id: string } }) {
+export default function EditItemPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const router = useRouter();
   const [categories, setCategories] = useState<Category[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
+  const [itemId, setItemId] = useState<string>("");
   const [formData, setFormData] = useState<FormData>({
     code: "",
     name: "",
@@ -62,14 +67,19 @@ export default function EditItemPage({ params }: { params: { id: string } }) {
   });
 
   useEffect(() => {
-    fetchItem();
-    fetchCategories();
-    fetchLocations();
+    const initializeParams = async () => {
+      const { id } = await params;
+      setItemId(id);
+      fetchItem(id);
+      fetchCategories();
+      fetchLocations();
+    };
+    initializeParams();
   }, []);
 
-  const fetchItem = async () => {
+  const fetchItem = async (id: string) => {
     try {
-      const response = await fetch(`/api/items/${params.id}`);
+      const response = await fetch(`/api/items/${id}`);
       if (response.ok) {
         const data = await response.json();
         const item: Item = data.data;
@@ -153,7 +163,7 @@ export default function EditItemPage({ params }: { params: { id: string } }) {
         max_stock: parseInt(formData.max_stock) || 1000,
       };
 
-      const response = await fetch(`/api/items/${params.id}`, {
+      const response = await fetch(`/api/items/${itemId}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

@@ -101,6 +101,13 @@ function AppLayoutContent({ children }: AppLayoutProps) {
 }
 
 export default function AppLayout({ children }: AppLayoutProps) {
+  const pathname = usePathname();
+
+  // Don't use AuthProvider for login page to avoid infinite loop
+  if (pathname === "/login") {
+    return <>{children}</>;
+  }
+
   return (
     <AuthProvider>
       <AppLayoutContent>{children}</AppLayoutContent>

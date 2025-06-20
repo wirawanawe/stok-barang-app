@@ -4,10 +4,11 @@ import { executeQuery } from "@/lib/db";
 // GET - Ambil item berdasarkan ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const itemId = parseInt(params.id);
+    const { id } = await params;
+    const itemId = parseInt(id);
 
     if (isNaN(itemId)) {
       return NextResponse.json({ error: "Invalid item ID" }, { status: 400 });
@@ -50,10 +51,11 @@ export async function GET(
 // PUT - Update item
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const itemId = parseInt(params.id);
+    const { id } = await params;
+    const itemId = parseInt(id);
 
     if (isNaN(itemId)) {
       return NextResponse.json({ error: "Invalid item ID" }, { status: 400 });
@@ -152,10 +154,11 @@ export async function PUT(
 // DELETE - Hapus item (soft delete)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const itemId = parseInt(params.id);
+    const { id } = await params;
+    const itemId = parseInt(id);
 
     if (isNaN(itemId)) {
       return NextResponse.json({ error: "Invalid item ID" }, { status: 400 });
