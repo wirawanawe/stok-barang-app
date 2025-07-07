@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyToken, extractTokenFromHeaders } from "@/lib/auth";
+import { verifyToken, validateSession } from "@/lib/auth";
 import { executeQuery } from "@/lib/db";
 
 export async function GET(request: NextRequest) {
   try {
-    // Get token from Authorization header or cookie
-    let token = extractTokenFromHeaders(request);
+    // Get token from cookie (since middleware doesn't process /api/auth routes)
+    let token = request.cookies.get("auth-token")?.value;
 
     if (!token) {
-      const cookieToken = request.cookies.get("auth-token");
-      token = cookieToken?.value || null;
+      // Also check Authorization header as fallback
+      const authHeader = request.headers.get("authorization");
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        token = authHeader.substring(7);
+      }
     }
 
     if (!token) {
@@ -19,11 +22,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verify token
+    // Verify JWT token
     const decoded = await verifyToken(token);
     if (!decoded) {
       return NextResponse.json(
         { success: false, message: "Token tidak valid" },
+        { status: 401 }
+      );
+    }
+
+    // Validate session in database
+    const sessionValidation = await validateSession(token);
+    if (!sessionValidation.valid) {
+      return NextResponse.json(
+        { success: false, message: "Session tidak valid atau telah expired" },
         { status: 401 }
       );
     }

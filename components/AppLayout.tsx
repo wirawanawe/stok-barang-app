@@ -5,24 +5,44 @@ import { usePathname } from "next/navigation";
 import { Menu, LogOut, User } from "lucide-react";
 import Sidebar from "./Sidebar";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { CustomerAuthProvider } from "@/lib/customer-auth-context";
+import { CartProvider } from "@/lib/cart-context";
+import { FeatureProvider } from "@/lib/feature-context";
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
-function AppLayoutContent({ children }: AppLayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, logout, isAuthenticated, isLoading } = useAuth();
+// Component for public routes (no auth needed)
+function PublicLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
+
+  // Don't show layout for login page
+  if (pathname === "/dashboard/login") {
+    return <>{children}</>;
+  }
+
+  // For homepage, wrap with CustomerAuthProvider and FeatureProvider
+  if (pathname === "/") {
+    return (
+      <FeatureProvider>
+        <CustomerAuthProvider>{children}</CustomerAuthProvider>
+      </FeatureProvider>
+    );
+  }
+
+  // For other public routes, just render the content
+  return <>{children}</>;
+}
+
+// Component for dashboard routes (auth required)
+function DashboardLayout({ children }: AppLayoutProps) {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user, logout, isAuthenticated, isLoading, displayRole } = useAuth();
 
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
   };
-
-  // Don't show layout for login page
-  if (pathname === "/login") {
-    return <>{children}</>;
-  }
 
   // Show loading state only if authentication is being checked and no user data
   if (isLoading && !user) {
@@ -51,6 +71,7 @@ function AppLayoutContent({ children }: AppLayoutProps) {
     );
   }
 
+  // Render dashboard layout with sidebar
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden">
       {/* Sidebar */}
@@ -79,7 +100,7 @@ function AppLayoutContent({ children }: AppLayoutProps) {
                 <User className="h-4 w-4" />
                 <span className="hidden sm:inline">{user?.full_name}</span>
                 <span className="inline-block px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">
-                  {user?.role}
+                  {displayRole}
                 </span>
               </div>
               <button
@@ -103,14 +124,60 @@ function AppLayoutContent({ children }: AppLayoutProps) {
 export default function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
 
-  // Don't use AuthProvider for login page to avoid infinite loop
-  if (pathname === "/login") {
-    return <>{children}</>;
+  // Routes that don't need AuthProvider (public customer pages)
+  const publicRoutes = ["/", "/dashboard/login"];
+
+  // Routes that need customer auth (shop, cart, etc.)
+  const customerRoutes = [
+    "/shop",
+    "/cart",
+    "/checkout",
+    "/order-confirmation",
+    "/customer",
+  ];
+
+  // Routes that require dashboard layout (with sidebar and auth)
+  const dashboardRoutes = [
+    "/dashboard",
+    "/dashboard/items",
+    "/dashboard/reports",
+    "/dashboard/settings",
+    "/dashboard/transactions",
+  ];
+
+  const isPublicRoute = publicRoutes.includes(pathname);
+  const isCustomerRoute = customerRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
+  const isDashboardRoute = dashboardRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
+
+  // For public routes, use PublicLayout (no AuthProvider needed)
+  if (isPublicRoute) {
+    return <PublicLayout>{children}</PublicLayout>;
   }
 
-  return (
-    <AuthProvider>
-      <AppLayoutContent>{children}</AppLayoutContent>
-    </AuthProvider>
-  );
+  // For customer routes, use customer auth with cart
+  if (isCustomerRoute) {
+    return (
+      <CustomerAuthProvider>
+        <CartProvider>{children}</CartProvider>
+      </CustomerAuthProvider>
+    );
+  }
+
+  // For dashboard routes, use DashboardLayout with AuthProvider and FeatureProvider
+  if (isDashboardRoute) {
+    return (
+      <AuthProvider>
+        <FeatureProvider>
+          <DashboardLayout>{children}</DashboardLayout>
+        </FeatureProvider>
+      </AuthProvider>
+    );
+  }
+
+  // For other routes, just render children
+  return <>{children}</>;
 }

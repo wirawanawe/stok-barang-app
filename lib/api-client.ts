@@ -31,7 +31,7 @@ export async function authenticatedFetch(
       // Token expired or invalid
       localStorage.removeItem("auth-token");
       localStorage.removeItem("user");
-      window.location.href = "/login";
+      window.location.href = "/dashboard/login";
       throw new Error("Authentication failed");
     }
 

@@ -15,6 +15,23 @@ CREATE TABLE users (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+-- Tabel User Sessions untuk mengelola login token
+CREATE TABLE user_sessions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  session_token VARCHAR(500) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  expires_at TIMESTAMP NOT NULL,
+  user_agent TEXT,
+  ip_address VARCHAR(45),
+  is_active BOOLEAN DEFAULT true,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE KEY unique_user_session (user_id),
+  INDEX idx_session_token (session_token),
+  INDEX idx_user_active (user_id, is_active),
+  INDEX idx_expires (expires_at)
+);
+
 -- Tabel Categories
 CREATE TABLE categories (
   id INT AUTO_INCREMENT PRIMARY KEY,

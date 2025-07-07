@@ -1,24 +1,27 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { verifyToken } from "@/lib/auth";
+import { verifyTokenMiddleware } from "@/lib/auth-middleware";
 
 // Define protected routes that require authentication
 const protectedRoutes = [
-  "/items",
-  "/reports",
-  "/settings",
-  "/transactions",
+  "/dashboard",
+  "/dashboard/items",
+  "/dashboard/reports",
+  "/dashboard/settings",
+  "/dashboard/transactions",
   "/api/items",
   "/api/categories",
   "/api/locations",
   "/api/stock-logs",
   "/api/dashboard",
   "/api/users",
+  "/api/pos",
+  "/api/customers",
 ];
 
 // Define admin-only routes
 const adminOnlyRoutes = [
-  "/settings",
+  "/dashboard/settings",
   "/api/categories",
   "/api/locations",
   "/api/users",
@@ -27,10 +30,16 @@ const adminOnlyRoutes = [
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip middleware for login page, API auth routes, and static files
+  // Skip middleware for login page, API auth routes, customer routes, and static files
   if (
-    pathname.startsWith("/login") ||
+    pathname.startsWith("/dashboard/login") ||
+    pathname.startsWith("/customer") ||
+    pathname.startsWith("/shop") ||
+    pathname.startsWith("/cart") ||
+    pathname.startsWith("/checkout") ||
+    pathname.startsWith("/order-confirmation") ||
     pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/customer/") || // Note the trailing slash to be more specific
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
     pathname.includes(".")
@@ -59,7 +68,7 @@ export async function middleware(request: NextRequest) {
 
   // Redirect to login if no token
   if (!token) {
-    const loginUrl = new URL("/login", request.url);
+    const loginUrl = new URL("/dashboard/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
 
     const response = NextResponse.redirect(loginUrl);
@@ -77,11 +86,11 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
-  // Verify token
-  const decoded = await verifyToken(token);
+  // Verify JWT token
+  const decoded = await verifyTokenMiddleware(token);
   if (!decoded) {
     // Clear invalid cookie
-    const loginUrl = new URL("/login", request.url);
+    const loginUrl = new URL("/dashboard/login", request.url);
     loginUrl.searchParams.set("redirect", pathname);
 
     const response = NextResponse.redirect(loginUrl);
@@ -115,6 +124,7 @@ export async function middleware(request: NextRequest) {
   requestHeaders.set("x-user-id", decoded.userId.toString());
   requestHeaders.set("x-user-role", decoded.role);
   requestHeaders.set("x-username", decoded.username);
+  requestHeaders.set("x-session-token", token); // Pass token for session validation in API routes
 
   return NextResponse.next({
     request: {

@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { executeQuery } from "@/lib/db";
-import { verifyPassword, generateToken, User } from "@/lib/auth";
+import {
+  verifyPassword,
+  generateToken,
+  User,
+  getUserActiveSession,
+  createUserSession,
+} from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,6 +51,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if user already has an active session
+    const existingSession = await getUserActiveSession(user.id);
+    if (existingSession) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "User sudah login di perangkat lain. Silakan logout terlebih dahulu atau hubungi admin.",
+        },
+        { status: 409 } // Conflict status
+      );
+    }
+
     // Generate JWT token
     const userData: User = {
       id: user.id,
@@ -56,6 +75,28 @@ export async function POST(request: NextRequest) {
     };
 
     const token = await generateToken(userData);
+
+    // Get user agent and IP address for session tracking
+    const userAgent = request.headers.get("user-agent") || "";
+    const ipAddress =
+      request.headers.get("x-forwarded-for") ||
+      request.headers.get("x-real-ip") ||
+      "unknown";
+
+    // Create new session in database
+    const sessionCreated = await createUserSession(
+      user.id,
+      token,
+      userAgent,
+      ipAddress
+    );
+
+    if (!sessionCreated) {
+      return NextResponse.json(
+        { success: false, message: "Gagal membuat session login" },
+        { status: 500 }
+      );
+    }
 
     // Set HTTP-only cookie for additional security
     const response = NextResponse.json({

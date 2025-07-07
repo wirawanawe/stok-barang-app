@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { useFeatures } from "@/lib/feature-context";
 import {
   LayoutDashboard,
   Package,
@@ -17,6 +18,12 @@ import {
   ChevronRight,
   Menu,
   X,
+  Globe,
+  Newspaper,
+  Shield,
+  Sliders,
+  Lock,
+  Database,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -27,58 +34,178 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const { user } = useAuth();
+  const [superAdminOpen, setSuperAdminOpen] = useState(false);
+  const [websiteInfo, setWebsiteInfo] = useState<any>(null);
+  // Safely get auth and feature context with fallbacks
+  let user, isSuperAdmin, isAdmin;
+  let isFeatureEnabled, hasPageAccess;
+
+  try {
+    const auth = useAuth();
+    user = auth.user;
+    isSuperAdmin = auth.isSuperAdmin;
+    isAdmin = auth.isAdmin;
+  } catch (error) {
+    // If useAuth is not available, set defaults
+    user = null;
+    isSuperAdmin = false;
+    isAdmin = false;
+  }
+
+  try {
+    const features = useFeatures();
+    isFeatureEnabled = features.isFeatureEnabled;
+    hasPageAccess = features.hasPageAccess;
+  } catch (error) {
+    // If useFeatures is not available, set defaults
+    isFeatureEnabled = () => true;
+    hasPageAccess = () => true;
+  }
+
+  useEffect(() => {
+    fetchWebsiteInfo();
+  }, []);
+
+  const fetchWebsiteInfo = async () => {
+    try {
+      const response = await fetch("/api/public/website-info");
+      const data = await response.json();
+      if (data.success) {
+        setWebsiteInfo(data.data);
+      }
+    } catch (error) {
+      console.error("Error fetching website info:", error);
+    }
+  };
 
   const mainMenuItems = [
     {
       name: "Dashboard",
-      href: "/",
+      href: "/dashboard",
       icon: LayoutDashboard,
+      featureKey: "dashboard",
+      pageKey: "dashboard",
     },
     {
-      name: "Transaksi",
-      href: "/transactions",
+      name: "POS / Transaksi",
+      href: "/dashboard/transactions",
       icon: ArrowUpDown,
+      featureKey: "transactions",
+      pageKey: "transactions",
     },
     {
       name: "Stok Barang",
-      href: "/items",
+      href: "/dashboard/items",
       icon: Package,
+      featureKey: "items_management",
+      pageKey: "items",
+    },
+    {
+      name: "Customer",
+      href: "/dashboard/customers",
+      icon: Users,
+      featureKey: "customers",
+      pageKey: "customers",
     },
     {
       name: "Laporan",
-      href: "/reports",
+      href: "/dashboard/reports",
       icon: FileText,
+      featureKey: "reports",
+      pageKey: "reports",
     },
   ];
 
   const settingsItems = [
     {
       name: "User Management",
-      href: "/settings/users",
+      href: "/dashboard/settings/users",
       icon: Users,
+      featureKey: "user_management",
+      pageKey: "settings_users",
     },
-
+    {
+      name: "Pengaturan Website",
+      href: "/dashboard/settings/website",
+      icon: Globe,
+      featureKey: "website_settings",
+      pageKey: "settings_website",
+    },
+    {
+      name: "Kelola Berita",
+      href: "/dashboard/settings/news",
+      icon: Newspaper,
+      featureKey: "news_management",
+      pageKey: "settings_news",
+    },
     {
       name: "Kelola Lokasi",
-      href: "/settings/locations",
+      href: "/dashboard/settings/locations",
       icon: MapPin,
+      featureKey: "locations",
+      pageKey: "settings_locations",
     },
     {
       name: "Kelola Kategori",
-      href: "/settings/categories",
+      href: "/dashboard/settings/categories",
       icon: Tag,
+      featureKey: "categories",
+      pageKey: "settings_categories",
+    },
+  ];
+
+  // Super Admin exclusive menu items (hidden from regular users and admins)
+  const superAdminItems = [
+    {
+      name: "Feature Toggles",
+      href: "/dashboard/super-admin/features",
+      icon: Sliders,
+      description: "Manage system features",
+    },
+    {
+      name: "Page Access Control",
+      href: "/dashboard/super-admin/pages",
+      icon: Lock,
+      description: "Control page access",
+    },
+    {
+      name: "System Configuration",
+      href: "/dashboard/super-admin/config",
+      icon: Database,
+      description: "System settings",
+    },
+    {
+      name: "User Roles",
+      href: "/dashboard/super-admin/roles",
+      icon: Shield,
+      description: "Manage user roles",
     },
   ];
 
   const isActive = (href: string) => {
-    if (href === "/") {
-      return pathname === "/";
+    if (href === "/dashboard") {
+      return pathname === "/dashboard";
     }
     return pathname.startsWith(href);
   };
 
   const isSettingsActive = settingsItems.some((item) => isActive(item.href));
+  const isSuperAdminActive = superAdminItems.some((item) =>
+    isActive(item.href)
+  );
+
+  // Filter menu items based on feature toggles and page access
+  const getVisibleMenuItems = (items: any[]) => {
+    return items.filter((item) => {
+      const featureEnabled =
+        !item.featureKey || isFeatureEnabled(item.featureKey);
+      const pageAccessible = !item.pageKey || hasPageAccess(item.pageKey);
+      return featureEnabled && pageAccessible;
+    });
+  };
+
+  const visibleMainItems = getVisibleMenuItems(mainMenuItems);
+  const visibleSettingsItems = getVisibleMenuItems(settingsItems);
 
   return (
     <>
@@ -100,13 +227,23 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
       `}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 flex-shrink-0">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-emerald-50 to-teal-50 flex-shrink-0">
           <div className="flex items-center">
-            <div className="p-2 bg-blue-600 rounded-lg mr-3">
-              <Package className="h-6 w-6 text-white" />
-            </div>
+            {websiteInfo?.settings?.site_logo ? (
+              <img
+                src={websiteInfo.settings.site_logo}
+                alt={websiteInfo.settings.site_title || "Logo"}
+                className="h-10 w-auto mr-3"
+              />
+            ) : (
+              <div className="p-2 bg-emerald-600 rounded-lg mr-3">
+                <Package className="h-6 w-6 text-white" />
+              </div>
+            )}
             <div>
-              <h1 className="text-lg font-bold text-gray-900">Stok Kain</h1>
+              <h1 className="text-lg font-bold text-gray-900">
+                {websiteInfo?.settings?.site_title || "Stok Kain"}
+              </h1>
               <p className="text-xs text-gray-600">Management System</p>
             </div>
           </div>
@@ -121,7 +258,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
         {/* Navigation */}
         <nav className="flex-1 p-6 space-y-1 overflow-y-auto">
           {/* Main Menu Items */}
-          {mainMenuItems.map((item) => {
+          {visibleMainItems.map((item) => {
             const Icon = item.icon;
             return (
               <Link
@@ -136,7 +273,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                   flex items-center px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200
                   ${
                     isActive(item.href)
-                      ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25"
+                      ? "bg-[#ff1717] text-white shadow-lg shadow-emerald-600/25"
                       : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                   }
                 `}
@@ -147,8 +284,67 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             );
           })}
 
-          {/* Settings with Submenu - Only for Admin */}
-          {user?.role === "admin" && (
+          {/* Super Admin Menu - Only visible to super admin */}
+          {isSuperAdmin && (
+            <div>
+              <button
+                onClick={() => setSuperAdminOpen(!superAdminOpen)}
+                className={`
+                  w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200
+                  ${
+                    isSuperAdminActive || superAdminOpen
+                      ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-lg"
+                      : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                  }
+                `}
+              >
+                <div className="flex items-center">
+                  <Shield className="h-5 w-5 mr-3" />
+                  System Control
+                </div>
+                {superAdminOpen ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </button>
+
+              {/* Super Admin Submenu */}
+              {superAdminOpen && (
+                <div className="mt-2 ml-6 space-y-1 border-l-2 border-purple-200 pl-4">
+                  {superAdminItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        onClick={() => {
+                          if (window.innerWidth < 1024) {
+                            onToggle();
+                          }
+                        }}
+                        className={`
+                          flex items-center px-3 py-2 rounded-lg text-sm transition-all duration-200
+                          ${
+                            isActive(item.href)
+                              ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-medium"
+                              : "text-gray-600 hover:bg-purple-50 hover:text-purple-800"
+                          }
+                        `}
+                        title={item.description}
+                      >
+                        <Icon className="h-4 w-4 mr-3" />
+                        {item.name}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Settings with Submenu - Only for Admin and Super Admin */}
+          {isAdmin && visibleSettingsItems.length > 0 && (
             <div>
               <button
                 onClick={() => setSettingsOpen(!settingsOpen)}
@@ -156,7 +352,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                   w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200
                   ${
                     isSettingsActive || settingsOpen
-                      ? "bg-blue-600 text-white shadow-lg shadow-blue-600/25"
+                      ? "bg-[#ff1717] text-white shadow-lg shadow-emerald-600/25"
                       : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                   }
                 `}
@@ -175,7 +371,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
               {/* Settings Submenu */}
               {settingsOpen && (
                 <div className="mt-2 ml-6 space-y-1 border-l-2 border-gray-200 pl-4">
-                  {settingsItems.map((item) => {
+                  {visibleSettingsItems.map((item) => {
                     const Icon = item.icon;
                     return (
                       <Link
@@ -190,7 +386,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
                           flex items-center px-3 py-2 rounded-lg text-sm transition-all duration-200
                           ${
                             isActive(item.href)
-                              ? "bg-blue-50 text-blue-600 font-medium"
+                              ? "bg-[#ff1717] text-white font-medium"
                               : "text-gray-600 hover:bg-gray-50 hover:text-gray-800"
                           }
                         `}
@@ -211,7 +407,9 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
           <div className="text-xs text-gray-500 text-center">
             © 2025 Sistem Stok Kain
           </div>
-          <div className="text-xs text-gray-400 text-center mt-1">v1.0.0</div>
+          <div className="text-xs text-gray-400 text-center mt-1">
+            v1.0.0 {isSuperAdmin && "- Super Admin"}
+          </div>
         </div>
       </div>
     </>

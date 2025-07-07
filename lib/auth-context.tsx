@@ -9,13 +9,17 @@ interface User {
   username: string;
   email: string;
   full_name: string;
-  role: "admin" | "user";
+  role: "super_admin" | "admin" | "user";
 }
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isSuperAdmin: boolean;
+  isAdmin: boolean;
+  isUser: boolean;
+  displayRole: string; // Role to display to the user (hides super_admin from others)
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
@@ -39,6 +43,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   const router = useRouter();
 
   const isAuthenticated = !!user;
+  const isSuperAdmin = user?.role === "super_admin";
+  const isAdmin = user?.role === "admin" || isSuperAdmin;
+  const isUser = !!user;
+
+  // Display role - hide super_admin from UI unless user is super_admin
+  const displayRole = user
+    ? user.role === "super_admin"
+      ? "admin"
+      : user.role
+    : "";
 
   const checkAuth = async (skipLoading = false) => {
     try {
@@ -59,8 +73,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         localStorage.removeItem("auth-token");
 
         // If we're not on login page and auth check fails, redirect
-        if (window.location.pathname !== "/login") {
-          window.location.href = "/login";
+        if (window.location.pathname !== "/dashboard/login") {
+          window.location.href = "/dashboard/login";
         }
       }
     } catch (error) {
@@ -71,8 +85,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       localStorage.removeItem("auth-token");
 
       // If we're not on login page and auth check fails, redirect
-      if (window.location.pathname !== "/login") {
-        window.location.href = "/login";
+      if (window.location.pathname !== "/dashboard/login") {
+        window.location.href = "/dashboard/login";
       }
     } finally {
       if (!skipLoading) setIsLoading(false);
@@ -134,7 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
       localStorage.removeItem("auth-token");
 
       // Force redirect to login with full page refresh to clear any cached state
-      window.location.href = "/login";
+      window.location.href = "/dashboard/login";
     }
   };
 
@@ -167,6 +181,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     user,
     isLoading,
     isAuthenticated,
+    isSuperAdmin,
+    isAdmin,
+    isUser,
+    displayRole,
     login,
     logout,
     checkAuth,

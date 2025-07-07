@@ -1,7 +1,16 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { removeUserSession } from "@/lib/auth";
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    // Get token from cookie
+    const token = request.cookies.get("auth-token")?.value;
+
+    // Remove session from database if token exists
+    if (token) {
+      await removeUserSession(token);
+    }
+
     const response = NextResponse.json({
       success: true,
       message: "Logout berhasil",

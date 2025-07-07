@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     let query = `
       SELECT 
         i.id, i.code, i.name, i.description, i.quantity, i.unit, i.price, 
-        i.min_stock, i.max_stock, i.created_at, i.updated_at,
+        i.min_stock, i.max_stock, i.images, i.created_at, i.updated_at,
         c.name as category_name,
         l.name as location_name
       FROM items i
@@ -99,6 +99,7 @@ export async function POST(request: NextRequest) {
       price,
       min_stock,
       max_stock,
+      images,
     } = body;
 
     // Validasi data required
@@ -126,8 +127,8 @@ export async function POST(request: NextRequest) {
     const insertQuery = `
       INSERT INTO items (
         code, name, description, category_id, location_id, 
-        quantity, unit, price, min_stock, max_stock
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        quantity, unit, price, min_stock, max_stock, images
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
 
     const insertParams = [
@@ -141,6 +142,7 @@ export async function POST(request: NextRequest) {
       price || 0,
       min_stock || 0,
       max_stock || 1000,
+      JSON.stringify(images || []),
     ];
 
     const result = await executeQuery(insertQuery, insertParams);

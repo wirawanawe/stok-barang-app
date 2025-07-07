@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="200" viewBox="0 0 300 200">
+  <rect width="300" height="200" fill="#0066cc"/>
+  <text x="150" y="100" font-family="Arial, sans-serif" font-size="16" fill="white" text-anchor="middle" dy="0.3em">Katun Combed 30s</text>
+  <text x="150" y="120" font-family="Arial, sans-serif" font-size="12" fill="#cce6ff" text-anchor="middle" dy="0.3em">Sample Image</text>
+</svg> 

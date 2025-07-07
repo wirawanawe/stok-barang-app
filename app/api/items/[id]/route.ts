@@ -73,6 +73,7 @@ export async function PUT(
       price,
       min_stock,
       max_stock,
+      images,
     } = body;
 
     // Validasi data required
@@ -110,7 +111,7 @@ export async function PUT(
     const updateQuery = `
       UPDATE items SET 
         code = ?, name = ?, description = ?, category_id = ?, location_id = ?,
-        quantity = ?, unit = ?, price = ?, min_stock = ?, max_stock = ?,
+        quantity = ?, unit = ?, price = ?, min_stock = ?, max_stock = ?, images = ?,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
     `;
@@ -126,6 +127,7 @@ export async function PUT(
       price || 0,
       min_stock || 0,
       max_stock || 1000,
+      JSON.stringify(images || []),
       itemId,
     ];
 

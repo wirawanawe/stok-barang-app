@@ -91,12 +91,6 @@ export async function GET(request: NextRequest) {
       LIMIT ${limit} OFFSET ${offset}
     `;
 
-    console.log("🔍 Query Debug:", {
-      query: usersQuery,
-      params: queryParams,
-      paramsCount: queryParams.length,
-    });
-
     const result = await executeQuery(usersQuery, queryParams);
 
     if (!result.success) {

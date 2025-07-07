@@ -1,8 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { executeQuery } from "@/lib/db";
+import { validateApiRequest } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Validate session (JWT + database)
+    const validation = await validateApiRequest(request);
+
+    if (!validation.valid) {
+      return NextResponse.json(
+        { success: false, message: validation.error || "Session tidak valid" },
+        { status: 401 }
+      );
+    }
+
     // Get total items count
     const itemsCountResult = await executeQuery(
       "SELECT COUNT(*) as total FROM items WHERE is_active = true"
@@ -73,20 +84,23 @@ export async function GET() {
     const categories = categoriesResult.success ? categoriesResult.data : [];
 
     return NextResponse.json({
-      stats: {
-        totalItems,
-        lowStockItems,
-        totalValue: Math.round(totalValue),
-        recentTransactions: 0, // Will be implemented when stock_logs is ready
+      success: true,
+      data: {
+        stats: {
+          totalItems,
+          lowStockItems,
+          totalValue: Math.round(totalValue),
+          recentTransactions: 0, // Will be implemented when stock_logs is ready
+        },
+        recentItems,
+        lowStockItems: lowStockItemsList,
+        categories,
       },
-      recentItems,
-      lowStockItems: lowStockItemsList,
-      categories,
     });
   } catch (error) {
     console.error("Error fetching dashboard data:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { success: false, message: "Terjadi kesalahan server" },
       { status: 500 }
     );
   }
